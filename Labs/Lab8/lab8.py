@@ -18,7 +18,8 @@ def driver():
     Nint = 10
     
     '''evaluate the linear spline'''
-    yeval = eval_lin_spline(xeval,Neval,a,b,f,Nint)
+    yeval1 = eval_lin_spline(xeval,Neval,a,b,f,Nint)
+    yeval2 = eval_cubic_spline(xeval, Neval, a, b, f, Nint)
     
     ''' evaluate f at the evaluation points'''
     fex = np.zeros(Neval)
@@ -28,13 +29,26 @@ def driver():
     
     plt.figure()
     plt.plot(xeval,fex,'ro-')
-    plt.plot(xeval,yeval,'bs-')
+    plt.plot(xeval,yeval1,'bs-')
     plt.legend()
     plt.show()
      
-    err = abs(yeval-fex)
+    err1 = abs(yeval1-fex)
     plt.figure()
-    plt.plot(xeval,err,'ro-')
+    plt.plot(xeval,err1,'ro-')
+    plt.show()
+    
+    
+    
+    plt.figure()
+    plt.plot(xeval,fex,'ro-')
+    plt.plot(xeval,yeval2,'bs-')
+    plt.legend()
+    plt.show()
+    
+    err2 = abs(yeval2-fex)
+    plt.figure()
+    plt.plot(xeval,err2,'ro-')
     plt.show()
     
     
@@ -74,7 +88,53 @@ def  eval_lin_spline(xeval,Neval,a,b,f,Nint):
 			yeval[ind_xval[kk]] = line_form(a1, b1, fa1, fb1)(xeval[ind_xval[kk]])
 	return yeval
            
+def  eval_cubic_spline(xeval,Neval,a,b,f,Nint):
+
+	'''create the intervals for piecewise approximations'''
+	xint = np.linspace(a,b,Nint+1)
+   
+	'''create vector to store the evaluation of the linear splines'''
+	yeval = np.zeros(Neval) 
+	
+	yval = np.zeros(Nint+1)
+	for i in range(Nint+1):
+		yval[i] = f(xint[i])
+	
+	M = solve_M(yval, xint)
+    
+    
+	for jint in range(Nint):
+		'''find indices of xeval in interval (xint(jint),xint(jint+1))'''
+		'''let ind denote the indices in the intervals'''
+        
+		ind = np.array([xint[jint], xint[jint+1]])
+        
+		ind_xval = sub(xeval, xint)[jint]
+        
+		'''let n denote the length of ind'''
+		n = len(ind_xval)
+        
+		'''temporarily store your info for creating a line in the interval of interest'''
+		a1= xint[jint]
+		fa1 = f(a1)
+		b1 = xint[jint+1]
+		fb1 = f(b1)
+        
+		for kk in range(n):
+			'''use your line evaluator to evaluate the lines at each of the points in the interval'''
            
+			'''yeval(ind(kk)) = call your line evaluator at xeval(ind(kk)) with the points (a1,fa1) and (b1,fb1)'''
+			yeval[ind_xval[kk]] = Si(M[jint], M[jint + 1], ind[0], ind[1], yval[jint], yval[jint + 1], ind_xval[kk])
+	return yeval
+
+def Si(Mi, Mi1, xi, xi1, yi, yi1, xval):
+	h = xi1 - xi
+	c = yi/h - (h/6)*Mi
+	d = yi1/h - (h/6)*Mi1
+	
+	s = (xi1-xval)**3/(6*h)*Mi + (xval-xi)**3*Mi1/(6*h) + c*(xi1-1) + d*(xval-xi)
+	return s
+
 def sub(xeval, xint):
 	subs = []
 	
@@ -103,11 +163,11 @@ def line_form(x1, x2, f1, f2):
 def solve_M(f, x):
 	y = np.zeros(len(x) - 1)
 	
-	for i in range(len(x)):
+	for i in range(len(x) - 2):
 		y[i] = (f[i+2] - 2*f[i+1] + f[i]) / 2*(x[i+1] - x[1])**2
 	
 	cof = np.zeros( (len(x) - 1)**2 )
-	cof.reshape( len(x) - 1, len(x) - 1)
+	np.reshape(cof, (len(x) - 1, len(x) - 1) )
 	
 	for i in range(len(x) - 1):
 		for j in range(len(x) - 1):
